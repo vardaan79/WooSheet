@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: woosheet
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18.0.0
+      - key: WC_BASE_URL
+        value: https://aquaticaindia.com
+      - key: WC_CONSUMER_KEY
+        sync: false # User must set this manually in Render dashboard
+      - key: WC_CONSUMER_SECRET
+        sync: false # User must set this manually in Render dashboard
+      - key: PORT
+        value: 10000
