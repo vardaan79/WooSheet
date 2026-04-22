@@ -167,10 +167,21 @@ app.use(express.static(join(__dirname, '../dist')));
 
 // The "catchall" handler: for any request that doesn't match one above, send back React's index.html file.
 app.get('*', (req, res) => {
-    res.sendFile(join(__dirname, '../dist/index.html'));
+    // Only serve index.html if we are not in a Netlify function environment
+    if (!process.env.NETLIFY) {
+        res.sendFile(join(__dirname, '../dist/index.html'));
+    } else {
+        res.status(404).send('Not found');
+    }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 WooSheet proxy server running on http://0.0.0.0:${PORT}`);
-    console.log(`   Connected to: ${WC_BASE}\n`);
-});
+// For local development
+if (process.env.NODE_ENV !== 'production' || (!process.env.NETLIFY && !process.env.VERCEL)) {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`\n🚀 WooSheet proxy server running on http://0.0.0.0:${PORT}`);
+        console.log(`   Connected to: ${WC_BASE}\n`);
+    });
+}
+
+export default app;
+
