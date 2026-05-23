@@ -131,23 +131,22 @@ app.get('/api/stats', async (req, res) => {
         }
 
         const statuses = ['pending', 'processing', 'on-hold', 'completed', 'cancelled', 'refunded', 'failed'];
-        const counts = [];
-        for (const s of statuses) {
-            try {
-                const start = Date.now();
-                const r = await axios.get(wcUrl('/orders'), {
+        const start = Date.now();
+        const results = await Promise.allSettled(
+            statuses.map(s =>
+                axios.get(wcUrl('/orders'), {
                     params: { ...wcParams(), status: s, per_page: 1, _fields: 'id' },
                     timeout: 25000,
-                });
-                counts.push({ status: s, count: parseInt(r.headers['x-wp-total']) || 0 });
-                console.log(`[Stats] Cached ${s} in ${Date.now() - start}ms`);
-                await new Promise(res => setTimeout(res, 300));
-            } catch (err) {
-                console.warn(`[Stats] Failed for ${s}:`, err.message);
-                const oldVal = cache.stats.data?.byStatus?.[s] || 0;
-                counts.push({ status: s, count: oldVal });
-            }
-        }
+                }).then(r => ({ status: s, count: parseInt(r.headers['x-wp-total']) || 0 }))
+            )
+        );
+        const counts = results.map((r, i) => {
+            if (r.status === 'fulfilled') return r.value;
+            console.warn(`[Stats] Failed for ${statuses[i]}:`, r.reason?.message);
+            const oldVal = cache.stats.data?.byStatus?.[statuses[i]] || 0;
+            return { status: statuses[i], count: oldVal };
+        });
+        console.log(`[Stats] All statuses fetched in ${Date.now() - start}ms`);
         const total = counts.reduce((sum, c) => sum + c.count, 0);
         const result = { total, byStatus: Object.fromEntries(counts.map(c => [c.status, c.count])) };
 
