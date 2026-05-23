@@ -27,6 +27,7 @@ const PORT = process.env.PORT || 3001;
 const WC_BASE = process.env.WC_BASE_URL || 'https://aquaticaindia.com';
 const WC_KEY = process.env.WC_CONSUMER_KEY;
 const WC_SECRET = process.env.WC_CONSUMER_SECRET;
+const APP_PASSWORD = process.env.APP_PASSWORD || 'Aquati(@Woo#Shee{';
 
 const keysConfigured = WC_KEY && !WC_KEY.includes('YOUR_CONSUMER_KEY');
 if (!keysConfigured) {
@@ -35,6 +36,15 @@ if (!keysConfigured) {
 } else {
     console.log(`✅ API keys loaded (${WC_KEY.substring(0, 12)}...)`);
 }
+
+// Auth endpoint
+app.post('/api/auth', (req, res) => {
+    const { password } = req.body;
+    if (password === APP_PASSWORD) {
+        return res.json({ success: true });
+    }
+    res.status(401).json({ success: false, error: 'Invalid password' });
+});
 
 // WooCommerce API always passes credentials as query params — more compatible
 // than Basic Auth header which some hosts/security plugins strip.

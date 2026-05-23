@@ -2,8 +2,10 @@ import { useState, useCallback } from 'react'
 import Dashboard from './pages/Dashboard.jsx'
 import OrderDetailModal from './components/OrderDetailModal.jsx'
 import Toast from './components/Toast.jsx'
+import LoginGate from './components/LoginGate.jsx'
 
 export default function App() {
+    const [authed, setAuthed] = useState(() => sessionStorage.getItem('woosheet_auth') === '1')
     const [selectedOrder, setSelectedOrder] = useState(null)
     const [toasts, setToasts] = useState([])
 
@@ -12,6 +14,8 @@ export default function App() {
         setToasts(t => [...t, { id, msg, type }])
         setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500)
     }, [])
+
+    if (!authed) return <LoginGate onAuth={() => setAuthed(true)} />
 
     return (
         <div className="app">
