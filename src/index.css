@@ -564,6 +564,29 @@ body,
   font-weight: 600;
   color: var(--text-secondary);
 }
+.state-box .state-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  max-width: 320px;
+  text-align: center;
+  margin-top: 4px;
+  word-break: break-word;
+}
+.retry-btn {
+  margin-top: 14px;
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #00c8e0;
+  background: rgba(0, 200, 224, 0.1);
+  border: 1px solid rgba(0, 200, 224, 0.4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.retry-btn:hover {
+  background: rgba(0, 200, 224, 0.2);
+}
 
 .state-box .state-body {
   font-size: 0.82rem;
@@ -822,6 +845,103 @@ body,
   color: var(--text-secondary);
   line-height: 1.6;
 }
+
+/* ── Line item strike (discounted price) ──────────────────────── */
+.line-item-strike {
+  text-decoration: line-through;
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.78rem;
+  margin-right: 6px;
+}
+
+/* ── Line item meta (booking date, addons, variations) ────────── */
+.line-item-block {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+.line-item-block:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.line-item-meta {
+  margin: 4px 0 0 0;
+  padding: 6px 10px;
+  background: var(--bg-hover);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.booking-box {
+  margin: 6px 0 0 0;
+  padding: 8px 10px;
+  background: rgba(0, 200, 224, 0.08);
+  border: 1px solid rgba(0, 200, 224, 0.25);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.meta-row {
+  display: flex;
+  gap: 8px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.meta-key {
+  color: var(--text-muted);
+  min-width: 110px;
+  flex-shrink: 0;
+}
+.meta-val {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.meta-val p { margin: 0; }
+.meta-row.meta-booking {
+  font-weight: 600;
+}
+.meta-row.meta-booking .meta-key,
+.meta-row.meta-booking .meta-val {
+  color: #00c8e0;
+}
+
+/* ── Order notes timeline ─────────────────────────────────────── */
+.order-note {
+  border-left: 3px solid var(--border);
+  background: var(--bg-hover);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.order-note.note-customer {
+  border-left-color: #3b82f6;
+}
+.order-note.note-private {
+  border-left-color: #f59e0b;
+}
+.order-note-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.order-note-tag {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.order-note-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.order-note-text p { margin: 0; }
 
 /* ── Toast notification ───────────────────────────────────────── */
 .toast-wrap {

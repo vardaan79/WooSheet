@@ -55,6 +55,29 @@ const wcParams = () => ({
 
 const wcUrl = (path) => `${WC_BASE}/wp-json/wc/v3${path}`;
 
+// Retry transient failures (timeout, network blip, 5xx, 429). Skip retry on
+// client errors (404/401/403) — those won't fix themselves.
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+async function wcGetWithRetry(url, config, { retries = 2, baseDelay = 800 } = {}) {
+    let lastErr;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            return await axios.get(url, config);
+        } catch (err) {
+            lastErr = err;
+            const status = err.response?.status;
+            const transient = !status || status >= 500 || status === 429
+                || err.code === 'ECONNABORTED' || err.code === 'ECONNRESET'
+                || err.code === 'ETIMEDOUT' || err.code === 'EPROTO';
+            if (!transient || attempt === retries) break;
+            const wait = baseDelay * Math.pow(2, attempt); // 800ms, 1600ms
+            console.warn(`[Retry] ${url} attempt ${attempt + 1} failed (${err.code || status}), retrying in ${wait}ms`);
+            await sleep(wait);
+        }
+    }
+    throw lastErr;
+}
+
 // ─── GET /api/orders ─────────────────────────────────────────────────────────
 app.get('/api/orders', async (req, res) => {
     try {
@@ -102,13 +125,18 @@ app.get('/api/orders', async (req, res) => {
 // ─── GET /api/orders/:id ─────────────────────────────────────────────────────
 app.get('/api/orders/:id', async (req, res) => {
     try {
-        const response = await axios.get(wcUrl(`/orders/${req.params.id}`), {
+        const response = await wcGetWithRetry(wcUrl(`/orders/${req.params.id}`), {
             params: wcParams(),
-            timeout: 15000,
+            timeout: 90000,
         });
         res.json(response.data);
     } catch (err) {
-        res.status(err.response?.status || 500).json({ error: err.message });
+        console.error(`GET /api/orders/${req.params.id} error:`, err.code || err.message);
+        res.status(err.response?.status || 502).json({
+            error: err.message,
+            code: err.code || null,
+            details: err.response?.data,
+        });
     }
 });
 
@@ -127,6 +155,36 @@ app.put('/api/orders/:id', async (req, res) => {
             error: err.message,
             details: err.response?.data,
         });
+    }
+});
+
+// ─── GET /api/orders/:id/notes ───────────────────────────────────────────────
+app.get('/api/orders/:id/notes', async (req, res) => {
+    try {
+        const response = await axios.get(wcUrl(`/orders/${req.params.id}/notes`), {
+            params: wcParams(),
+            timeout: 15000,
+        });
+        res.json(response.data);
+    } catch (err) {
+        console.error(`GET /api/orders/${req.params.id}/notes error:`, err.message);
+        res.status(err.response?.status || 500).json({ error: err.message });
+    }
+});
+
+// ─── GET /api/bookings/:id ───────────────────────────────────────────────────
+// WooCommerce Bookings plugin stores the booked date on a separate booking
+// record, referenced from the line item by _booking_id.
+app.get('/api/bookings/:id', async (req, res) => {
+    try {
+        const response = await wcGetWithRetry(
+            `${WC_BASE}/wp-json/wc-bookings/v1/bookings/${req.params.id}`,
+            { params: wcParams(), timeout: 90000 }
+        );
+        res.json(response.data);
+    } catch (err) {
+        console.error(`GET /api/bookings/${req.params.id} error:`, err.code || err.message);
+        res.status(err.response?.status || 502).json({ error: err.message, code: err.code || null });
     }
 });
 

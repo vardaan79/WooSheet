@@ -5,3 +5,5 @@ dist
 *.local
 ngrok.exe
 .ngrok.exe.old
+
+.vercel
