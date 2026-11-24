@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 import StatusBadge from './StatusBadge.jsx'
+import { fmtEpoch, bookingIdOf, visitDatesOf, fmtVisitDate } from '../lib/visit.js'
 
 const ALL_STATUSES = ['pending', 'processing', 'on-hold', 'completed', 'cancelled', 'refunded', 'failed']
 const fmt = (v) => `₹${parseFloat(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
@@ -14,6 +15,7 @@ export default function OrderTable({ orders, onOrderClick, addToast, onStatusCha
                 <span>#ID</span>
                 <span>Customer</span>
                 <span>Date</span>
+                <span>Visit Date</span>
                 <span>Items</span>
                 <span>Total</span>
                 <span>Status</span>
@@ -45,6 +47,22 @@ function OrderRow({ order, onClick, addToast, onStatusChange }) {
         .join(', ')
         .substring(0, 40) + ((order.line_items?.length > 1) ? '…' : '')
 
+    // First visit date found across line items: WPC date picker first, then
+    // resolved WC Bookings record. Orders with neither show a dash.
+    const visitCell = (() => {
+        for (const it of order.line_items || []) {
+            const dates = visitDatesOf(it)
+            if (dates.length) return dates.map(d => fmtVisitDate(d.value)).join(', ')
+            const bId = bookingIdOf(it)
+            if (bId) {
+                return it.booking_info
+                    ? fmtEpoch(it.booking_info.start, it.booking_info.all_day)
+                    : `#${bId}`
+            }
+        }
+        return '—'
+    })()
+
     const handleSave = async (e) => {
         e.stopPropagation()
         setSaving(true)
@@ -75,6 +93,11 @@ function OrderRow({ order, onClick, addToast, onStatusChange }) {
 
             {/* Date */}
             <span className="order-date">{fmtDate(order.date_created)}</span>
+
+            {/* Visit Date */}
+            <span className="order-visit-date" style={{ color: 'var(--accent-primary)', fontSize: '0.78rem' }}>
+                📅 {visitCell}
+            </span>
 
             {/* Items */}
             <span className="order-items" title={order.line_items?.map(i => i.name).join(', ')}>

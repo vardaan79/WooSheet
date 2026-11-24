@@ -78,6 +78,50 @@ async function wcGetWithRetry(url, config, { retries = 2, baseDelay = 800 } = {}
     throw lastErr;
 }
 
+// WC Bookings records resolved for the orders list so visit dates render
+// without one round-trip per order from the browser.
+const bookingCache = new Map(); // bookingId -> { data, timestamp }
+const BOOKING_TTL = 60 * 60 * 1000;
+
+// _booking_id holds a number on real WC Bookings items, an empty array on
+// waterpark (WPC) items — only numbers are usable.
+const bookingIdFromMeta = (item) => {
+    const v = (item?.meta_data || []).find(m => m.key === '_booking_id')?.value;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+async function getBookingCached(id) {
+    const hit = bookingCache.get(id);
+    if (hit && Date.now() - hit.timestamp < BOOKING_TTL) return hit.data;
+    const r = await wcGetWithRetry(
+        `${WC_BASE}/wp-json/wc-bookings/v1/bookings/${id}`,
+        { params: wcParams(), timeout: 30000 }
+    );
+    bookingCache.set(id, { data: r.data, timestamp: Date.now() });
+    return r.data;
+}
+
+async function injectBookingInfo(orders) {
+    const ids = [...new Set(orders.flatMap(o =>
+        (o.line_items || []).map(bookingIdFromMeta).filter(Boolean)))];
+    if (!ids.length) return;
+    const resolved = {};
+    await Promise.allSettled(ids.map(async id => { resolved[id] = await getBookingCached(id); }));
+    for (const o of orders) {
+        for (const li of o.line_items || []) {
+            const id = bookingIdFromMeta(li);
+            const bk = id ? resolved[id] : null;
+            if (bk) {
+                li.booking_info = {
+                    start: bk.start, end: bk.end,
+                    all_day: bk.all_day, status: bk.status,
+                };
+            }
+        }
+    }
+}
+
 // ─── GET /api/orders ─────────────────────────────────────────────────────────
 app.get('/api/orders', async (req, res) => {
     try {
@@ -107,6 +151,7 @@ app.get('/api/orders', async (req, res) => {
 
         const total = parseInt(response.headers['x-wp-total']) || 0;
         const totalPages = parseInt(response.headers['x-wp-totalpages']) || 1;
+        await injectBookingInfo(response.data);
         const result = { orders: response.data, total, totalPages };
 
         // Save to cache

@@ -1,24 +1,12 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import StatusBadge from './StatusBadge.jsx'
+import { fmtEpoch, bookingIdOf, visitDatesOf, fmtVisitDate } from '../lib/visit.js'
 
 const ALL_STATUSES = ['pending', 'processing', 'on-hold', 'completed', 'cancelled', 'refunded', 'failed']
 
 const fmt = (v) => `₹${parseFloat(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
 const fmtDate = (s) => s ? new Date(s).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—'
-
-// WC Bookings epoch (seconds) → readable. all_day → date only.
-const fmtEpoch = (sec, allDay) => {
-    if (!sec) return '—'
-    const d = new Date(sec * 1000)
-    return allDay
-        ? d.toLocaleDateString('en-IN', { dateStyle: 'full' })
-        : d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-}
-
-// Pull _booking_id from a line item's raw meta_data (it's an internal _key)
-const bookingIdOf = (item) =>
-    (item?.meta_data || []).find(m => m.key === '_booking_id')?.value || null
 
 // Booking/date-ish meta keys to highlight in line items
 const isBookingKey = (k = '') => /book|date|schedul|appoint|slot|delivery|pickup|start|end/i.test(k)
@@ -255,8 +243,9 @@ export default function OrderDetailModal({ orderId, onClose, addToast }) {
                                     const tot = parseFloat(item.total || 0)
                                     const discounted = sub > tot
                                     const meta = visibleMeta(item.meta_data)
+                                    const vDates = visitDatesOf(item)
                                     const bId = bookingIdOf(item)
-                                    const bk = bId ? bookings[bId] : null
+                                    const bk = bId ? (item.booking_info || bookings[bId]) : null
                                     return (
                                         <div key={item.id} className="line-item-block">
                                             <div className="line-item">
@@ -274,6 +263,16 @@ export default function OrderDetailModal({ orderId, onClose, addToast }) {
                                                     {fmt(tot)}
                                                 </div>
                                             </div>
+                                            {vDates.length > 0 && (
+                                                <div className="booking-box">
+                                                    {vDates.map((d, i) => (
+                                                        <div key={i} className="meta-row meta-booking">
+                                                            <span className="meta-key">📅 {d.title}</span>
+                                                            <span className="meta-val">{fmtVisitDate(d.value)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                             {bId && (
                                                 <div className="booking-box">
                                                     {bk ? (
